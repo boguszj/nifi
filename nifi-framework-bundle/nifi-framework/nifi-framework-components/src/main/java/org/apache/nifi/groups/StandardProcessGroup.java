@@ -4641,13 +4641,39 @@ public final class StandardProcessGroup implements ProcessGroup {
             setGroupPath();
         }
 
-        final VersionControlInformation currentVersionControl = versionControlInfo.get();
+        final VersionControlInformation currentVersionControl = resolveVersionControlInformation();
         if (currentVersionControl != null) {
             final String registeredFlowIdentifier = currentVersionControl.getFlowIdentifier();
             loggingAttributes.put(LoggingAttribute.REGISTERED_FLOW_IDENTIFIER.attribute, registeredFlowIdentifier);
 
             final String registeredFlowVersion = currentVersionControl.getVersion();
             loggingAttributes.put(LoggingAttribute.REGISTERED_FLOW_VERSION.attribute, registeredFlowVersion);
+        }
+
+        refreshDescendantLoggingAttributes();
+    }
+
+    private VersionControlInformation resolveVersionControlInformation() {
+        final VersionControlInformation localVci = versionControlInfo.get();
+        if (localVci != null) {
+            return localVci;
+        }
+        ProcessGroup ancestor = getParent();
+        while (ancestor != null) {
+            final VersionControlInformation ancestorVci = ancestor.getVersionControlInformation();
+            if (ancestorVci != null) {
+                return ancestorVci;
+            }
+            ancestor = ancestor.getParent();
+        }
+        return null;
+    }
+
+    private void refreshDescendantLoggingAttributes() {
+        for (final ProcessGroup child : getProcessGroups()) {
+            if (child instanceof StandardProcessGroup standardChild) {
+                standardChild.setLoggingAttributes();
+            }
         }
     }
 
